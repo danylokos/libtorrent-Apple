@@ -1,0 +1,44 @@
+name: Xcode - Build
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    name: Build using xcodebuild command
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Build
+        run: ./build.sh
+        shell: bash
+
+      - name: Get version
+        run: echo "::set-output name=version::$(./build.sh -v)"
+        id: version
+      
+      - name: Create release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload release artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./build/libtorrent.xcframework.zip
+          asset_name: libtorrent.xcframework.zip
+          asset_content_type: application/gzip
